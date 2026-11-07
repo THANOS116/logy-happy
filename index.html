@@ -224,6 +224,9 @@
       <button id="restartTopBtn" type="button" class="hidden px-3 py-1.5 rounded-full bg-pink-100/90 backdrop-blur border-2 border-pink-800 text-pink-950 font-bold text-xs sm:text-sm shadow-md hover:bg-pink-200 active:scale-95 transition">
         🔄 من الأول
       </button>
+      <button id="fsBtn" type="button" class="px-3 py-1.5 rounded-full bg-white/90 backdrop-blur border-2 border-purple-900 text-purple-950 font-bold text-xs sm:text-sm shadow-md hover:bg-white active:scale-95 transition">
+        ⛶ ملء الشاشة
+      </button>
     </div>
 
     <div id="hudBadge" class="hidden px-3.5 py-1.5 rounded-full bg-purple-950/85 backdrop-blur border-2 border-pink-400 text-pink-200 font-extrabold text-xs sm:text-sm shadow-lg">
@@ -2420,7 +2423,33 @@
 
       document.getElementById('restartTopBtn').addEventListener('click', fullRestart);
 
-      // Mute / Unmute Toggle
+      // Fullscreen
+const fsBtn = document.getElementById('fsBtn');
+const rootEl = document.documentElement;
+const canFS = rootEl.requestFullscreen || rootEl.webkitRequestFullscreen;
+if (!canFS) fsBtn.classList.add('hidden'); // iPhone مش بيدعمها
+
+fsBtn.addEventListener('click', async () => {
+  try { initAudio(); } catch (_) {}
+  try {
+    if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+      await (rootEl.requestFullscreen?.() || rootEl.webkitRequestFullscreen?.());
+      try { await screen.orientation.lock('landscape'); } catch (_) {}
+    } else {
+      await (document.exitFullscreen?.() || document.webkitExitFullscreen?.());
+    }
+  } catch (e) { console.log(e); }
+});
+
+const onFsChange = () => {
+  const on = document.fullscreenElement || document.webkitFullscreenElement;
+  fsBtn.textContent = on ? '✖ خروج' : '⛶ ملء الشاشة';
+  setTimeout(resizeCanvas, 200);
+};
+document.addEventListener('fullscreenchange', onFsChange);
+document.addEventListener('webkitfullscreenchange', onFsChange);
+
+// Mute / Unmute Toggle
       document.getElementById('muteBtn').addEventListener('click', () => {
         isMuted = !isMuted;
         document.getElementById('muteIcon').textContent = isMuted ? '🔇' : '🔊';
