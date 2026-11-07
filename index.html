@@ -2363,7 +2363,17 @@
 
       // Phase 1 button listener
       const initialGiftBtn = document.getElementById('initialGiftBtn');
-      initialGiftBtn.addEventListener('click', triggerPrankStart);
+      initialGiftBtn.addEventListener('click', () => {
+        // دخول ملء الشاشة أول ما تدوس على زرار البداية
+        try {
+          const r = document.documentElement;
+          if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+            const p = r.requestFullscreen ? r.requestFullscreen() : (r.webkitRequestFullscreen && r.webkitRequestFullscreen());
+            Promise.resolve(p).then(() => { try { screen.orientation.lock('landscape').catch(()=>{}); } catch (_) {} }).catch(()=>{});
+          }
+        } catch (_) {}
+        triggerPrankStart();
+      });
 
       // Touch / Pointer Controls
       bindHoldButton(document.getElementById('btnRight'), 'right');
