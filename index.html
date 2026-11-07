@@ -180,7 +180,8 @@
       #scarePopup p { font-size: 1.05rem; }
       #cakePromptTitle { font-size: 0.95rem; }
       #cakeBannerOverlay > div { padding: 0.35rem 0.8rem; }
-      #micStatusText { display: none; }
+      #micStatusText { font-size: 0.72rem; line-height: 1.25; margin-top: 0.15rem; }
+      #micMeterContainer { display: none; }
       .card-scroll { max-height: calc(100dvh - 16px); padding: 0.9rem !important; }
     }
   </style>
@@ -469,6 +470,9 @@
     const WORLD_W = 860;
     const WORLD_H = 460;
     const GROUND_Y = 395;
+    // Visible width grows on wide screens (phones) so the game fills the screen; the playable world stays WORLD_W wide and centred
+    let VIEW_W = WORLD_W;
+    let VIEW_OFF = 0;
 
     // Input state
     const keys = { left: false, right: false, jump: false, touchJump: false };
@@ -894,7 +898,7 @@
       const colors = ['#f472b6', '#c084fc', '#facc15', '#38bdf8', '#4ade80', '#fb7185'];
       for (let i = 0; i < 85; i++) {
         confettiPieces.push({
-          x: Math.random() * WORLD_W,
+          x: Math.random() * VIEW_W - VIEW_OFF,
           y: -20 - Math.random() * 300,
           vx: (Math.random() - 0.5) * 2.5,
           vy: 1.8 + Math.random() * 3.2,
@@ -982,7 +986,7 @@
       // Move background clouds
       clouds.forEach(c => {
         c.x -= c.speed;
-        if (c.x < -120) c.x = WORLD_W + 80;
+        if (c.x < -VIEW_OFF - 120) c.x = WORLD_W + VIEW_OFF + 80;
       });
 
       // Update particles
@@ -1003,7 +1007,7 @@
         c.rot += c.vRot;
         if (c.y > WORLD_H + 20) {
           c.y = -15;
-          c.x = Math.random() * WORLD_W;
+          c.x = Math.random() * VIEW_W - VIEW_OFF;
         }
       }
 
@@ -1398,7 +1402,14 @@
     // Rendering: Crisp 2D Pixel Art World, Nurse Character, Traps & Pixel Cake
     // ============================================================================
     function drawGame() {
-      ctx.clearRect(0, 0, WORLD_W, WORLD_H);
+      ctx.save();
+      ctx.translate(VIEW_OFF, 0);
+      drawGameWorld();
+      ctx.restore();
+    }
+
+    function drawGameWorld() {
+      ctx.clearRect(-VIEW_OFF, 0, VIEW_W, WORLD_H);
 
       // 1. Sky Background
       const skyGrad = ctx.createLinearGradient(0, 0, 0, WORLD_H);
@@ -1420,13 +1431,13 @@
         skyGrad.addColorStop(1, '#fbcfe8');
       }
       ctx.fillStyle = skyGrad;
-      ctx.fillRect(0, 0, WORLD_W, WORLD_H);
+      ctx.fillRect(-VIEW_OFF, 0, VIEW_W, WORLD_H);
 
       // 2. Pixel Clouds / Stars
       if (gameState === 'CAKE_WAIT_BLOW' || gameState === 'CAKE_CELEBRATION') {
         ctx.fillStyle = '#fef08a';
         for (let i = 0; i < 30; i++) {
-          const sx = (i * 97) % WORLD_W;
+          const sx = ((i * 97) % VIEW_W) - VIEW_OFF;
           const sy = (i * 53) % (GROUND_Y - 80);
           const sz = (i % 3 === 0) ? 4 : 2;
           ctx.fillRect(sx, sy, sz, sz);
@@ -1528,7 +1539,7 @@
       ctx.save();
       const t = Date.now() / 400;
       for (let i = 0; i < 45; i++) {
-        const sx = (i * 89) % WORLD_W;
+        const sx = ((i * 89) % VIEW_W) - VIEW_OFF;
         const sy = (i * 47) % (GROUND_Y - 90);
         const tw = 0.5 + 0.5 * Math.sin(t + i);
         ctx.fillStyle = `rgba(254, 249, 195, ${0.35 + tw * 0.6})`;
@@ -1608,10 +1619,10 @@
       ctx.save();
       ctx.globalAlpha = a;
       ctx.fillStyle = 'rgba(15, 5, 35, 0.8)';
-      ctx.fillRect(0, 150, WORLD_W, 130);
+      ctx.fillRect(-VIEW_OFF, 150, VIEW_W, 130);
       ctx.fillStyle = '#f472b6';
-      ctx.fillRect(0, 150, WORLD_W, 4);
-      ctx.fillRect(0, 276, WORLD_W, 4);
+      ctx.fillRect(-VIEW_OFF, 150, VIEW_W, 4);
+      ctx.fillRect(-VIEW_OFF, 276, VIEW_W, 4);
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillStyle = '#ffffff';
@@ -1650,18 +1661,19 @@
     function drawGround() {
       // Top grass strip
       ctx.fillStyle = currentLevel === 3 ? '#7c3aed' : currentLevel === 2 ? '#65a30d' : '#22c55e';
-      ctx.fillRect(0, GROUND_Y, WORLD_W, 12);
+      const gx0 = -Math.ceil(VIEW_OFF / 36) * 36;
+      ctx.fillRect(-VIEW_OFF, GROUND_Y, VIEW_W, 12);
       ctx.fillStyle = currentLevel === 3 ? '#4c1d95' : currentLevel === 2 ? '#3f6212' : '#15803d';
-      for (let x = 0; x < WORLD_W; x += 24) {
+      for (let x = gx0; x < WORLD_W + VIEW_OFF; x += 24) {
         ctx.fillRect(x, GROUND_Y + 8, 12, 4);
       }
       // Brick soil beneath
       ctx.fillStyle = '#b45309';
-      ctx.fillRect(0, GROUND_Y + 12, WORLD_W, WORLD_H - GROUND_Y - 12);
+      ctx.fillRect(-VIEW_OFF, GROUND_Y + 12, VIEW_W, WORLD_H - GROUND_Y - 12);
       ctx.strokeStyle = '#78350f';
       ctx.lineWidth = 2;
       for (let y = GROUND_Y + 12; y < WORLD_H; y += 18) {
-        for (let x = 0; x < WORLD_W; x += 36) {
+        for (let x = gx0; x < WORLD_W + VIEW_OFF; x += 36) {
           const offset = ((y / 18) % 2 === 0) ? 0 : 18;
           ctx.strokeRect(x + offset, y, 36, 18);
         }
@@ -2256,7 +2268,12 @@
     function resizeCanvas() {
       // Internal world stays WORLD_W x WORLD_H; backing store is scaled for sharp retina output (max 2x)
       const dpr = Math.min(2, window.devicePixelRatio || 1);
-      const bw = Math.round(WORLD_W * dpr), bh = Math.round(WORLD_H * dpr);
+      const cont = document.getElementById('canvasContainer');
+      const r = cont ? cont.getBoundingClientRect() : { width: 0, height: 0 };
+      const cw = r.width || window.innerWidth, ch = r.height || window.innerHeight;
+      VIEW_W = Math.round(Math.min(1500, Math.max(WORLD_W, WORLD_H * cw / Math.max(1, ch))));
+      VIEW_OFF = (VIEW_W - WORLD_W) / 2;
+      const bw = Math.round(VIEW_W * dpr), bh = Math.round(WORLD_H * dpr);
       if (canvas.width !== bw || canvas.height !== bh) {
         canvas.width = bw;
         canvas.height = bh;
